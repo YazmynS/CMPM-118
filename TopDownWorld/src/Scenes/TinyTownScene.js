@@ -49,13 +49,25 @@ class TinyTown extends Phaser.Scene {
             "mushroom": "mapTile_104.png",
         };
 
+        // Store the initial noise frequency for map generation
+        this.currentFrequency = 0.12;
+
         // Generate the initial map
         this.generateMap(width, height, tiles, decor);
 
-        // Regenerate the map when the 'R' key is pressed
+        // Regenerate the map when the 'R' key is pressed (with new seed)
         this.input.keyboard.on('keydown-R', () => {
             noise.seed(Math.random());  // Generate new seed
             this.generateMap(width, height, tiles, decor);  // Regenerate map
+        });
+
+        // Keybindings for shrinking and growing the sample window
+        this.input.keyboard.on('keydown-COMMA', () => {  // < key
+            this.adjustFrequency(-0.02, width, height, tiles, decor);
+        });
+
+        this.input.keyboard.on('keydown-PERIOD', () => {  // > key
+            this.adjustFrequency(0.02, width, height, tiles, decor);
         });
 
         document.getElementById('description').innerHTML = 
@@ -64,10 +76,22 @@ class TinyTown extends Phaser.Scene {
             '<h2>Press &gt; to grow the sample window</h2>';
     }
 
+    // Function to adjust the frequency and regenerate the map without changing the seed
+    adjustFrequency(amount, width, height, tiles, decor) {
+        // Adjust the current frequency by the given amount
+        this.currentFrequency += amount;
+
+        // Clamp the frequency to a reasonable range
+        this.currentFrequency = Math.max(0.02, Math.min(0.5, this.currentFrequency)); // Prevent frequency from getting too small or too large
+
+        // Regenerate the map with the updated frequency (same seed)
+        this.generateMap(width, height, tiles, decor);
+    }
+
     // Function to generate the terrain and decor
     generateMap(width, height, tiles, decor) {
         const tileSize = 64;   // Each tile is 64x64 pixels
-        const frequency = 0.12; // Increased frequency for smaller islands
+        const frequency = this.currentFrequency; // Use the current frequency for noise
         let yPosition = 0;     // Starting y position
 
         this.children.removeAll();  // Clear all existing tiles before regenerating
@@ -106,29 +130,54 @@ class TinyTown extends Phaser.Scene {
 
     // Generate decor on top of valid terrain
     generateDecor(terrain, decor) {
-        const decorFrequency = 0.2; // Lower frequency for placing decor
+        const decorFrequency = 0.15; // Adjusted decor frequency for better placement
         terrain.forEach((row, y) => {
             row.forEach((cell, x) => {
-                // Only place decor on certain tiles (e.g., no decor on water)
-                if (cell.tileKey !== "water") {
-                    let noiseValue = (noise.perlin2(x * decorFrequency, y * decorFrequency) + 1) / 2;
+                // Get noise value for decor placement
+                let noiseValue = (noise.perlin2(x * decorFrequency, y * decorFrequency) + 1) / 2;
 
-                    // Randomly select a decor element based on noise value
-                    if (noiseValue > 0.75) {
-                        // Select random decor element
-                        let decorKey = this.getRandomDecor(decor);
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decorKey);
+                // Place decor based on tile type and rules
+                if (cell.tileKey === "water" && noiseValue > 0.7) {
+                    // SandRock can appear in water
+                    this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["sandRock"]);
+                } else if (this.isSandTile(cell.tileKey)) {
+                    if (noiseValue > 0.7) {
+                        // Cactus on sand
+                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["cactus"]);
+                    } else if (noiseValue > 0.55) {
+                        // Rock or Castle can appear on sand
+                        let randomDecor = this.getRandomDecor([decor["rock"], decor["castle"], decor["sandRock"]]);
+                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
+                    }
+                } else if (this.isGrassTile(cell.tileKey)) {
+                    if (noiseValue > 0.7) {
+                        // Trees, Mushrooms, GrassDecor on grass
+                        let randomDecor = this.getRandomDecor([decor["tree"], decor["mushroom"], decor["grassDecor"]]);
+                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
+                    } else if (noiseValue > 0.55) {
+                        // Rock or Castle can also appear on grass
+                        let randomDecor = this.getRandomDecor([decor["rock"], decor["castle"]]);
+                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
                     }
                 }
             });
         });
     }
 
-    // Get a random decor item
-    getRandomDecor(decor) {
-        const keys = Object.keys(decor);
-        const randomIndex = Math.floor(Math.random() * keys.length);
-        return decor[keys[randomIndex]];
+    // Get a random decor item from a list
+    getRandomDecor(decorList) {
+        const randomIndex = Math.floor(Math.random() * decorList.length);
+        return decorList[randomIndex];
+    }
+
+    // Helper to check if a tile is a sand tile
+    isSandTile(tileKey) {
+        return tileKey.includes("Sand");
+    }
+
+    // Helper to check if a tile is a grass tile
+    isGrassTile(tileKey) {
+        return tileKey.includes("Grass");
     }
 
     // Determine which tile type to place based on noise value
