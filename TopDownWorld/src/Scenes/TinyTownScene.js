@@ -1,4 +1,4 @@
-import '../../lib/perlin.js';  // Import Perlin.js from the correct path
+import '../../lib/perlin.js';  // Import Perlin.js
 
 class TinyTown extends Phaser.Scene {
     constructor() {
@@ -6,7 +6,7 @@ class TinyTown extends Phaser.Scene {
     }
 
     preload() {
-        // Load the tilesheet and XML data
+        // Load the tilesheet and XML
         this.load.setPath("./assets/");
         this.load.atlasXML('tiny_town_tiles', 'mapPack_spritesheet.png', 'mapPack_spritesheet.xml');
     }
@@ -16,181 +16,103 @@ class TinyTown extends Phaser.Scene {
         const height = 15;  // 15 rows
         const width = 20;   // 20 columns
 
-        // Define the tileset to use for the terrain
+        // Define terrain tiles
         const tiles = {
-            "UpperLeftSand": "mapTile_001.png", 
-            "UpperMiddleSand": "mapTile_002.png", 
-            "UpperRightSand": "mapTile_003.png", 
-            "MiddleLeftSand": "mapTile_016.png", 
-            "MiddleMiddleSand": "mapTile_017.png", 
-            "MiddleRightSand": "mapTile_018.png", 
-            "LowerLeftSand": "mapTile_031.png",
-            "LowerMiddleSand": "mapTile_032.png",
-            "LowerRightSand": "mapTile_033.png",
-            "UpperLeftGrass": "mapTile_006.png", 
-            "UpperMiddleGrass": "mapTile_007.png", 
-            "UpperRightGrass": "mapTile_008.png", 
-            "MiddleLeftGrass": "mapTile_021.png",
-            "MiddleMiddleGrass": "mapTile_022.png",
-            "MiddleRightGrass": "mapTile_023.png",
-            "LowerLeftGrass": "mapTile_036.png",
-            "LowerMiddleGrass": "mapTile_037.png",
-            "LowerRightGrass": "mapTile_038.png",
-            "water": "mapTile_188.png",
-        };
-
-        const decor = {
-            "cactus": "mapTile_035.png",
-            "rock": "mapTile_050.png",
-            "tree": "mapTile_040.png",
-            "sandRock": "mapTile_049.png",
-            "grassDecor": "mapTile_054.png",
-            "castle": "mapTile_099.png",
-            "mushroom": "mapTile_104.png",
+            "water": "mapTile_188.png",           // Water tile
+            "MiddleMiddleGrass": "mapTile_022.png", // Grass tile
+            "MiddleMiddleSand": "mapTile_017.png"  // Sand tile
         };
 
         // Store the initial noise frequency for map generation
-        this.currentFrequency = 0.12;
+        this.terrainFrequency = 0.06;  // Lower frequency for larger, more distinct regions
+        this.waterFrequency = 0.15;    // Slightly higher frequency for sporadic water placement
 
         // Generate the initial map
-        this.generateMap(width, height, tiles, decor);
+        this.generateMap(width, height, tiles);
 
-        // Regenerate the map when the 'R' key is pressed (with new seed)
+        // Regenerate the map with 'R' key
         this.input.keyboard.on('keydown-R', () => {
             noise.seed(Math.random());  // Generate new seed
-            this.generateMap(width, height, tiles, decor);  // Regenerate map
+            this.generateMap(width, height, tiles);  // Regenerate map
         });
 
-        // Keybindings for shrinking and growing the sample window
+        // Shrinking and Growing Window
         this.input.keyboard.on('keydown-COMMA', () => {  // < key
-            this.adjustFrequency(-0.02, width, height, tiles, decor);
+            this.adjustFrequency(-0.02, width, height, tiles);
         });
 
         this.input.keyboard.on('keydown-PERIOD', () => {  // > key
-            this.adjustFrequency(0.02, width, height, tiles, decor);
+            this.adjustFrequency(0.02, width, height, tiles);
         });
 
+        // Display Directions
         document.getElementById('description').innerHTML = 
             '<h2>Press &lt; to shrink the sample window</h2>' + 
             '<h2>Press R to regenerate map</h2>' + 
             '<h2>Press &gt; to grow the sample window</h2>';
     }
 
-    // Function to adjust the frequency and regenerate the map without changing the seed
-    adjustFrequency(amount, width, height, tiles, decor) {
-        // Adjust the current frequency by the given amount
-        this.currentFrequency += amount;
+    // Adjust frequency and regenerate map without changing seed
+    // Adjust frequency and regenerate map without changing seed
+adjustFrequency(amount, width, height, tiles) {
+    // Adjust both terrain and water frequencies
+    this.terrainFrequency += amount;    
+    this.waterFrequency += amount;    // Add this line to adjust the water frequency too
 
-        // Clamp the frequency to a reasonable range
-        this.currentFrequency = Math.max(0.02, Math.min(0.5, this.currentFrequency)); // Prevent frequency from getting too small or too large
+    // Prevent frequencies from getting too small or too large
+    this.terrainFrequency = Math.max(0.02, Math.min(0.5, this.terrainFrequency));  
+    this.waterFrequency = Math.max(0.02, Math.min(0.5, this.waterFrequency));  // Add this line
 
-        // Regenerate the map with the updated frequency (same seed)
-        this.generateMap(width, height, tiles, decor);
-    }
+    // Regenerate the map with updated frequency
+    this.generateMap(width, height, tiles);  
+}
 
-    // Function to generate the terrain and decor
-    generateMap(width, height, tiles, decor) {
-        const tileSize = 64;   // Each tile is 64x64 pixels
-        const frequency = this.currentFrequency; // Use the current frequency for noise
+
+    // Generate terrain and water
+    generateMap(width, height, tiles) {
+        const tileSize = 45;   // Each tile is 45x45 pixels
+        const terrainFrequency = this.terrainFrequency; // Use the terrain frequency for grass and sand regions
+        const waterFrequency = this.waterFrequency;     // Use a different frequency for water to scatter it
         let yPosition = 0;     // Starting y position
 
-        this.children.removeAll();  // Clear all existing tiles before regenerating
+        this.children.removeAll();  // Clear tiles before regenerating
 
-        // Store the terrain data to place decor later
-        const terrain = [];
-
-        // Generate terrain (tiles) first
+        // Generate terrain and water
         for (let y = 0; y < height; y++) {
             let xPosition = 0;  // Starting x position
-            const row = [];
             for (let x = 0; x < width; x++) {
-                // Get Perlin noise value between -1 and 1, normalize to 0-1 range
-                let noiseValue = (noise.perlin2(x * frequency, y * frequency) + 1) / 2;
+                // Get Perlin noise value for terrain between -1 and 1, normalize to 0-1 range
+                let terrainNoiseValue = (noise.perlin2(x * terrainFrequency, y * terrainFrequency) + 1) / 2;
+                
+                // Get Perlin noise value for water with a higher frequency for scattering
+                let waterNoiseValue = (noise.perlin2(x * waterFrequency, y * waterFrequency) + 1) / 2;
 
-                // Determine tile type based on the noise value
-                let tileKey = this.getTileFromNoise(noiseValue, tiles);
+                // Determine tile type based on noise values
+                let tileKey = this.getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles);
 
                 // Place the tile at the calculated x, y position
                 this.add.image(xPosition, yPosition, 'tiny_town_tiles', tileKey);
 
-                // Store the tile for later decor placement
-                row.push({ tileKey, x: xPosition, y: yPosition });
-
                 // Move to the next tile horizontally
                 xPosition += tileSize;
             }
-            terrain.push(row);
             // Move to the next row vertically
             yPosition += tileSize;
         }
-
-        // Now generate decor on top of the terrain
-        this.generateDecor(terrain, decor);
-    }
-
-    // Generate decor on top of valid terrain
-    generateDecor(terrain, decor) {
-        const decorFrequency = 0.15; // Adjusted decor frequency for better placement
-        terrain.forEach((row, y) => {
-            row.forEach((cell, x) => {
-                // Get noise value for decor placement
-                let noiseValue = (noise.perlin2(x * decorFrequency, y * decorFrequency) + 1) / 2;
-
-                // Place decor based on tile type and rules
-                if (cell.tileKey === "water" && noiseValue > 0.7) {
-                    // SandRock can appear in water
-                    this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["sandRock"]);
-                } else if (this.isSandTile(cell.tileKey)) {
-                    if (noiseValue > 0.7) {
-                        // Cactus on sand
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["cactus"]);
-                    } else if (noiseValue > 0.55) {
-                        // Rock or Castle can appear on sand
-                        let randomDecor = this.getRandomDecor([decor["rock"], decor["castle"], decor["sandRock"]]);
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
-                    }
-                } else if (this.isGrassTile(cell.tileKey)) {
-                    if (noiseValue > 0.7) {
-                        // Trees, Mushrooms, GrassDecor on grass
-                        let randomDecor = this.getRandomDecor([decor["tree"], decor["mushroom"], decor["grassDecor"]]);
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
-                    } else if (noiseValue > 0.55) {
-                        // Rock or Castle can also appear on grass
-                        let randomDecor = this.getRandomDecor([decor["rock"], decor["castle"]]);
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', randomDecor);
-                    }
-                }
-            });
-        });
-    }
-
-    // Get a random decor item from a list
-    getRandomDecor(decorList) {
-        const randomIndex = Math.floor(Math.random() * decorList.length);
-        return decorList[randomIndex];
-    }
-
-    // Helper to check if a tile is a sand tile
-    isSandTile(tileKey) {
-        return tileKey.includes("Sand");
-    }
-
-    // Helper to check if a tile is a grass tile
-    isGrassTile(tileKey) {
-        return tileKey.includes("Grass");
     }
 
     // Determine which tile type to place based on noise value
-    getTileFromNoise(noiseValue, tiles) {
-        // Water-heavy with even distribution for sand and grass
-        if (noiseValue < 0.6) {
-            return tiles["water"];  // Water covers the majority of the map
-        } else if (noiseValue < 0.7) {
-            return tiles["UpperLeftSand"];  // Sand tile for the shore (evenly distributed with grass)
-        } else if (noiseValue < 0.8) {
-            return tiles["UpperLeftGrass"];  // Grass tile for the inner part of islands
+    getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles) {
+        // Use the water noise value to scatter water sporadically across the map
+        if (waterNoiseValue < 0.3) {  // 20% chance for sporadic water placement
+            return tiles["water"];
+        }
+
+        // Use terrain noise value for larger clusters of grass and sand
+        if (terrainNoiseValue < 0.5) {
+            return tiles["MiddleMiddleGrass"];  // 30% chance for grass
         } else {
-            return tiles["MiddleMiddleGrass"];  // Grass tile for inner part of island
+            return tiles["MiddleMiddleSand"];   // 30% chance for sand
         }
     }
 
