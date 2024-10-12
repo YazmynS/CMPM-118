@@ -24,14 +24,13 @@ class TinyTown extends Phaser.Scene {
         };
 
         const decor = {
-            // Sand Decor
             "cactus": "mapTile_035.png",
-
-            // Grass Decor
             "tree": "mapTile_040.png",
-
-            // Water Decor
             "sandRock": "mapTile_049.png",
+        };
+
+        const player = {
+            "sprite": "mapTile_136.png"  // Player sprite
         };
 
         // Store the initial noise frequency for map generation
@@ -44,11 +43,20 @@ class TinyTown extends Phaser.Scene {
         // Generate decor based on terrain
         this.generateDecor(terrainData, decor);
 
-        // Regenerate the map with 'R' key
+        // Add the player sprite at position (200, 200) after terrain and decor generation
+        this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
+
+        // Capture cursor keys (arrow keys)
+        this.cursors = this.input.keyboard.createCursorKeys(); 
+
+        // Regenerate the map with 'R' key and re-add the player
         this.input.keyboard.on('keydown-R', () => {
             noise.seed(Math.random());  // Generate new seed
             const newTerrainData = this.generateTerrain(width, height, tiles);  // Regenerate terrain
             this.generateDecor(newTerrainData, decor);  // Regenerate decor
+
+            // Re-add the player sprite after regenerating the map
+            this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
         });
 
         // Shrinking and Growing Window
@@ -82,10 +90,13 @@ class TinyTown extends Phaser.Scene {
     
         // Recalculate the decor after adjusting the frequencies
         this.generateDecor(terrainData, decor);  
+
+        // Re-add the player after terrain generation to ensure it's on top
+        this.player = this.add.image(200, 200, 'tiny_town_tiles', 'mapTile_136.png');
     }
 
     // Generate terrain and water
-    generateTerrain(width, height, tiles) {  // No need for decor here
+    generateTerrain(width, height, tiles) {
         const tileSize = 45;   // Each tile is 45x45 pixels
         const terrainFrequency = this.terrainFrequency; // Use the terrain frequency for grass and sand regions
         const waterFrequency = this.waterFrequency;     // Use a different frequency for water to scatter it
@@ -141,22 +152,18 @@ class TinyTown extends Phaser.Scene {
                 if (cell.tileKey === "mapTile_017.png") {  
                     // Sand tiles: Place cactus with equal frequency
                     if (decorNoiseValue > cactusThreshold) {
-                        console.log(`Placing cactus at (${cell.x}, ${cell.y})`);
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["cactus"]);
                     }
                 } else if (cell.tileKey === "mapTile_022.png") {
                     // Grass tiles: Place trees with equal frequency
                     if (decorNoiseValue > treeThreshold) {
-                        console.log(`Placing tree at (${cell.x}, ${cell.y})`);
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["tree"]);
                     }
                 } else if (cell.tileKey === "mapTile_188.png") {
                     // Water tiles: Place rocks, but no cactus or tree
                     if (decorNoiseValue > rockThreshold) {
-                        console.log(`Placing sand rock at (${cell.x}, ${cell.y})`);
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["sandRock"]);
                     }
-                
                 }
             });
         });
@@ -165,20 +172,36 @@ class TinyTown extends Phaser.Scene {
     // Determine which tile type to place based on noise value
     getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles) {
         // Use the water noise value to scatter water sporadically across the map
-        if (waterNoiseValue < 0.3) {  // 30% chance for sporadic water placement
+        if (waterNoiseValue < 0.3) {
             return tiles["water"];
         }
 
         // Use terrain noise value for larger clusters of grass and sand
         if (terrainNoiseValue < 0.5) {
-            return tiles["MiddleMiddleGrass"];  // 30% chance for grass
+            return tiles["MiddleMiddleGrass"];
         } else {
-            return tiles["MiddleMiddleSand"];   // 30% chance for sand
+            return tiles["MiddleMiddleSand"];
         }
     }
 
     update() {
-        // You can add interactive logic or animations here
+        const speed = 3;  // Player movement speed (adjust as needed)
+
+        if (this.player) {
+            // Move the player based on arrow keys
+            if (this.cursors.left.isDown) {
+                this.player.x -= speed;  // Move left
+            }
+            if (this.cursors.right.isDown) {
+                this.player.x += speed;  // Move right
+            }
+            if (this.cursors.up.isDown) {
+                this.player.y -= speed;  // Move up
+            }
+            if (this.cursors.down.isDown) {
+                this.player.y += speed;  // Move down
+            }
+        }
     }
 }
 
