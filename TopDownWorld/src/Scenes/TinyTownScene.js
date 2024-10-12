@@ -38,10 +38,10 @@ class TinyTown extends Phaser.Scene {
         this.waterFrequency = 0.15;    // Slightly higher frequency for sporadic water placement
 
         // Generate the initial map
-        const terrainData = this.generateTerrain(width, height, tiles);
+        this.terrainData = this.generateTerrain(width, height, tiles);
 
         // Generate decor based on terrain
-        this.generateDecor(terrainData, decor);
+        this.generateDecor(this.terrainData, decor);
 
         // Add the player sprite at position (200, 200) after terrain and decor generation
         this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
@@ -77,72 +77,62 @@ class TinyTown extends Phaser.Scene {
 
     // Adjust frequency and regenerate terrain and decor without changing seed
     adjustFrequency(amount, width, height, tiles, decor) {  // Accept 'decor' as a parameter
-        // Adjust both terrain and water frequencies
         this.terrainFrequency += amount;    
         this.waterFrequency += amount;    
     
-        // Prevent frequencies from getting too small or too large
         this.terrainFrequency = Math.max(0.02, Math.min(0.5, this.terrainFrequency));  
         this.waterFrequency = Math.max(0.02, Math.min(0.5, this.waterFrequency));  
     
-        // Regenerate the terrain and decor with the updated frequency
         const terrainData = this.generateTerrain(width, height, tiles);
-    
-        // Recalculate the decor after adjusting the frequencies
-        this.generateDecor(terrainData, decor);  
+        this.generateDecor(terrainData, decor);
 
-        // Re-add the player after terrain generation to ensure it's on top
         this.player = this.add.image(200, 200, 'tiny_town_tiles', 'mapTile_136.png');
     }
 
-    // Generate terrain and water
+    // Generate terrain and store water tile locations
     generateTerrain(width, height, tiles) {
-        const tileSize = 45;   // Each tile is 45x45 pixels
-        const terrainFrequency = this.terrainFrequency; // Use the terrain frequency for grass and sand regions
-        const waterFrequency = this.waterFrequency;     // Use a different frequency for water to scatter it
-        let yPosition = 0;     // Starting y position
+        const tileSize = 45;
+        const terrainFrequency = this.terrainFrequency;
+        const waterFrequency = this.waterFrequency;
+        let yPosition = 0;
 
-        this.children.removeAll();  // Clear tiles before regenerating
+        this.children.removeAll();
+        this.waterTiles = [];  // Array to store water tile positions
 
-        // Store terrain data for decor placement
         const terrainData = [];
 
-        // Generate terrain and water
         for (let y = 0; y < height; y++) {
-            let xPosition = 0;  // Starting x position
+            let xPosition = 0;
             const row = [];
             for (let x = 0; x < width; x++) {
-                // Get Perlin noise value for terrain between -1 and 1, normalize to 0-1 range
                 let terrainNoiseValue = (noise.perlin2(x * terrainFrequency, y * terrainFrequency) + 1) / 2;
-
-                // Get Perlin noise value for water with a higher frequency for scattering
                 let waterNoiseValue = (noise.perlin2(x * waterFrequency, y * waterFrequency) + 1) / 2;
 
-                // Determine tile type based on noise values
                 let tileKey = this.getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles);
 
-                // Place the tile at the calculated x, y position
                 this.add.image(xPosition, yPosition, 'tiny_town_tiles', tileKey);
 
-                // Store the tile data for decor generation
                 row.push({ x: xPosition, y: yPosition, tileKey });
 
-                // Move to the next tile horizontally
+                // If the tile is water, store its position
+                if (tileKey === tiles["water"]) {
+                    this.waterTiles.push({ x: xPosition, y: yPosition });
+                }
+
                 xPosition += tileSize;
             }
             terrainData.push(row);
-            // Move to the next row vertically
             yPosition += tileSize;
         }
 
-        return terrainData;  // Return terrain data for use in decor generation
+        return terrainData;
     }
 
     generateDecor(terrainData, decor) {
-        const decorFrequency = 0.1;  // Frequency for decor placement
-        const cactusThreshold = 0.7;  // Threshold for cactus placement
-        const treeThreshold = 0.7;    // Threshold for tree placement
-        const rockThreshold = 0.7;    // Threshold for rock placement on water
+        const decorFrequency = 0.1;
+        const cactusThreshold = 0.7;
+        const treeThreshold = 0.7;
+        const rockThreshold = 0.7;
     
         terrainData.forEach((row) => {
             row.forEach((cell) => {
@@ -150,17 +140,14 @@ class TinyTown extends Phaser.Scene {
     
                 // Place decor based on the tile type
                 if (cell.tileKey === "mapTile_017.png") {  
-                    // Sand tiles: Place cactus with equal frequency
                     if (decorNoiseValue > cactusThreshold) {
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["cactus"]);
                     }
                 } else if (cell.tileKey === "mapTile_022.png") {
-                    // Grass tiles: Place trees with equal frequency
                     if (decorNoiseValue > treeThreshold) {
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["tree"]);
                     }
                 } else if (cell.tileKey === "mapTile_188.png") {
-                    // Water tiles: Place rocks, but no cactus or tree
                     if (decorNoiseValue > rockThreshold) {
                         this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["sandRock"]);
                     }
@@ -171,12 +158,10 @@ class TinyTown extends Phaser.Scene {
 
     // Determine which tile type to place based on noise value
     getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles) {
-        // Use the water noise value to scatter water sporadically across the map
         if (waterNoiseValue < 0.3) {
             return tiles["water"];
         }
 
-        // Use terrain noise value for larger clusters of grass and sand
         if (terrainNoiseValue < 0.5) {
             return tiles["MiddleMiddleGrass"];
         } else {
@@ -184,22 +169,40 @@ class TinyTown extends Phaser.Scene {
         }
     }
 
+    // Check if a tile is water
+    isWaterTile(x, y) {
+        return this.waterTiles.some(tile => {
+            // Snap player position to tile grid to avoid floating-point precision issues
+            const snappedX = Math.floor(x / 45) * 45;
+            const snappedY = Math.floor(y / 45) * 45;
+            return tile.x === snappedX && tile.y === snappedY;
+        });
+    }
+
     update() {
-        const speed = 3;  // Player movement speed (adjust as needed)
+        const speed = 5;  // Player movement speed
 
         if (this.player) {
-            // Move the player based on arrow keys
+            let newX = this.player.x;
+            let newY = this.player.y;
+
             if (this.cursors.left.isDown) {
-                this.player.x -= speed;  // Move left
+                newX -= speed;
             }
             if (this.cursors.right.isDown) {
-                this.player.x += speed;  // Move right
+                newX += speed;
             }
             if (this.cursors.up.isDown) {
-                this.player.y -= speed;  // Move up
+                newY -= speed;
             }
             if (this.cursors.down.isDown) {
-                this.player.y += speed;  // Move down
+                newY += speed;
+            }
+
+            // Prevent movement if the new position is a water tile
+            if (!this.isWaterTile(newX, newY)) {
+                this.player.x = newX;
+                this.player.y = newY;
             }
         }
     }
