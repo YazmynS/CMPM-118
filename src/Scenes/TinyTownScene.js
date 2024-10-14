@@ -13,58 +13,58 @@ class TinyTown extends Phaser.Scene {
 
     create() {
         // Define map dimensions (in tiles)
-        const height = 15;  // 15 rows
-        const width = 20;   // 20 columns
+        const height = 15;  // 15 row
+        const width = 20;   // 20 col
 
         // Define terrain tiles
         const tiles = {
-            "water": "mapTile_188.png",           // Water tile
-            "MiddleMiddleGrass": "mapTile_022.png", // Grass tile
-            "MiddleMiddleSand": "mapTile_017.png"  // Sand tile
+            "water": "mapTile_188.png",           
+            "MiddleMiddleGrass": "mapTile_022.png", 
+            "MiddleMiddleSand": "mapTile_017.png"  
         };
 
+        //Define decor tiles
         const decor = {
             "cactus": "mapTile_035.png",
             "tree": "mapTile_040.png",
             "sandRock": "mapTile_049.png",
         };
 
+        //Define player sprite
         const player = {
-            "sprite": "mapTile_136.png"  // Player sprite
+            "sprite": "mapTile_136.png"
         };
 
-        // Store the initial noise frequency for map generation
-        this.terrainFrequency = 0.06;  // Lower frequency for larger, more distinct regions
-        this.waterFrequency = 0.15;    // Slightly higher frequency for sporadic water placement
+        // Initialize Frequencies
+        this.terrainFrequency = 0.06;  // Lower frequency = large regions
+        this.waterFrequency = 0.15;    //  higher frequency = sporadic water placement
 
-        // Generate the initial map
+        // Generate map
         this.terrainData = this.generateTerrain(width, height, tiles);
 
-        // Generate decor based on terrain
+        // Generate decor based on terrain data
         this.generateDecor(this.terrainData, decor);
 
-        // Add the player sprite at position (200, 200) after terrain and decor generation
+        // Add the player sprite (Note: Generic Start Position, Could be anywhere.)
         this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
 
-        // Capture cursor keys (arrow keys)
+        // Get arrow keys
         this.cursors = this.input.keyboard.createCursorKeys(); 
 
-        // Regenerate the map with 'R' key and re-add the player
+        // Regenerate the map, decor, and player
         this.input.keyboard.on('keydown-R', () => {
             noise.seed(Math.random());  // Generate new seed
-            const newTerrainData = this.generateTerrain(width, height, tiles);  // Regenerate terrain
-            this.generateDecor(newTerrainData, decor);  // Regenerate decor
-
-            // Re-add the player sprite after regenerating the map
+            const newTerrainData = this.generateTerrain(width, height, tiles);  
+            this.generateDecor(newTerrainData, decor); 
             this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
         });
 
-        // Shrinking and Growing Window
-        this.input.keyboard.on('keydown-COMMA', () => {  // < key
+        // Shrinking and Growing Window Keys
+        this.input.keyboard.on('keydown-COMMA', () => {
             this.adjustFrequency(-0.02, width, height, tiles, decor);
         });
 
-        this.input.keyboard.on('keydown-PERIOD', () => {  // > key
+        this.input.keyboard.on('keydown-PERIOD', () => {
             this.adjustFrequency(0.02, width, height, tiles, decor);
         });
 
@@ -72,39 +72,44 @@ class TinyTown extends Phaser.Scene {
         document.getElementById('description').innerHTML = 
             '<h2>Press &lt; to shrink the sample window</h2>' + 
             '<h2>Press R to regenerate map</h2>' + 
-            '<h2>Press &gt; to grow the sample window</h2>';
+            '<h2>Press &gt; to grow the sample window</h2>' +
+            '<h2>Press arrow keys to move</h2>';
     }
 
-    // Adjust frequency and regenerate terrain and decor without changing seed
-    adjustFrequency(amount, width, height, tiles, decor) {  // Accept 'decor' as a parameter
+    // Adjust frequency without changing seed
+    adjustFrequency(amount, width, height, tiles, decor) {  
         this.terrainFrequency += amount;    
         this.waterFrequency += amount;    
     
         this.terrainFrequency = Math.max(0.02, Math.min(0.5, this.terrainFrequency));  
         this.waterFrequency = Math.max(0.02, Math.min(0.5, this.waterFrequency));  
     
+        //Regenerate
         const terrainData = this.generateTerrain(width, height, tiles);
         this.generateDecor(terrainData, decor);
-
         this.player = this.add.image(200, 200, 'tiny_town_tiles', 'mapTile_136.png');
     }
 
-    // Generate terrain and store water tile locations
+    // Generate from top right to bottom left
     generateTerrain(width, height, tiles) {
         const tileSize = 45;
         const terrainFrequency = this.terrainFrequency;
         const waterFrequency = this.waterFrequency;
         let yPosition = 0;
 
+        //Clear previous tiles
         this.children.removeAll();
-        this.waterTiles = [];  // Array to store water tile positions
 
+        //Store tile placements/types
+        this.waterTiles = [];  
         const terrainData = [];
 
+        //Loop through grid
         for (let y = 0; y < height; y++) {
             let xPosition = 0;
             const row = [];
             for (let x = 0; x < width; x++) {
+               //Use noise to place water/terrain tiles
                 let terrainNoiseValue = (noise.perlin2(x * terrainFrequency, y * terrainFrequency) + 1) / 2;
                 let waterNoiseValue = (noise.perlin2(x * waterFrequency, y * waterFrequency) + 1) / 2;
 
@@ -114,7 +119,7 @@ class TinyTown extends Phaser.Scene {
 
                 row.push({ x: xPosition, y: yPosition, tileKey });
 
-                // If the tile is water, store its position
+                // Note where water tiles are
                 if (tileKey === tiles["water"]) {
                     this.waterTiles.push({ x: xPosition, y: yPosition });
                 }
@@ -129,13 +134,17 @@ class TinyTown extends Phaser.Scene {
     }
 
     generateDecor(terrainData, decor) {
+        //Initialize decor frequency 
         const decorFrequency = 0.1;
         const cactusThreshold = 0.7;
         const treeThreshold = 0.7;
         const rockThreshold = 0.7;
     
+        //Loop through map grid
         terrainData.forEach((row) => {
             row.forEach((cell) => {
+                
+                //Use noise to determine decor placement
                 let decorNoiseValue = (noise.perlin2(cell.x * decorFrequency, cell.y * decorFrequency) + 1) / 2;
     
                 // Place decor based on the tile type
@@ -169,10 +178,9 @@ class TinyTown extends Phaser.Scene {
         }
     }
 
-    // Check if a tile is water
+    // Check if a tile is water (Snapped??)
     isWaterTile(x, y) {
         return this.waterTiles.some(tile => {
-            // Snap player position to tile grid to avoid floating-point precision issues
             const snappedX = Math.floor(x / 45) * 45;
             const snappedY = Math.floor(y / 45) * 45;
             return tile.x === snappedX && tile.y === snappedY;
@@ -180,12 +188,16 @@ class TinyTown extends Phaser.Scene {
     }
 
     update() {
-        const speed = 5;  // Player movement speed
+        
+        //Set Player Speed
+        const speed = 5; 
 
+        //Update x,y position
         if (this.player) {
             let newX = this.player.x;
             let newY = this.player.y;
 
+            //Move player with arrow keys
             if (this.cursors.left.isDown) {
                 newX -= speed;
             }
@@ -199,7 +211,7 @@ class TinyTown extends Phaser.Scene {
                 newY += speed;
             }
 
-            // Prevent movement if the new position is a water tile
+            // Prevent movement on water tiles
             if (!this.isWaterTile(newX, newY)) {
                 this.player.x = newX;
                 this.player.y = newY;
@@ -208,5 +220,5 @@ class TinyTown extends Phaser.Scene {
     }
 }
 
-// Export the scene
+// Export scene
 export default TinyTown;
