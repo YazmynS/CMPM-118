@@ -181,8 +181,8 @@ class TinyTown extends Phaser.Scene {
     // Check if a tile is water (Snapped??)
     isWaterTile(x, y) {
         return this.waterTiles.some(tile => {
-            const snappedX = Math.floor(x / tileSize) * tileSize;
-            const snappedY = Math.floor(y / tileSize) * tileSize;
+            const snappedX = Math.floor(x / 64) * 64;
+            const snappedY = Math.floor(y / 64) * 64;
             return tile.x === snappedX && tile.y === snappedY;
         });
     }
