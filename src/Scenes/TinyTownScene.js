@@ -92,7 +92,7 @@ class TinyTown extends Phaser.Scene {
 
     // Generate from top right to bottom left
     generateTerrain(width, height, tiles) {
-        const tileSize = 45;
+        const tileSize = 64;
         const terrainFrequency = this.terrainFrequency;
         const waterFrequency = this.waterFrequency;
         let yPosition = 0;
@@ -181,8 +181,8 @@ class TinyTown extends Phaser.Scene {
     // Check if a tile is water (Snapped??)
     isWaterTile(x, y) {
         return this.waterTiles.some(tile => {
-            const snappedX = Math.floor(x / 45) * 45;
-            const snappedY = Math.floor(y / 45) * 45;
+            const snappedX = Math.floor(x / 64) * 64;
+            const snappedY = Math.floor(y / 64) * 64;
             return tile.x === snappedX && tile.y === snappedY;
         });
     }
