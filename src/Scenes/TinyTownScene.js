@@ -32,17 +32,6 @@ class TinyTown extends Phaser.Scene {
             "LowerLeftGrass": "mapTile_036.png",
             "LowerMiddleGrass": "mapTile_037.png",
             "LowerRightGrass": "mapTile_038.png",
-
-            "UpperLeftGrassWater": "mapTile_106.png",
-            "UpperMiddleGrassWater": "mapTile_107.png",
-            "UpperRightGrassWater": "mapTile_108.png",
-            
-            "MiddleLeftGrassWater": "mapTile_121.png",
-            "MiddleRightGrassWater": "mapTile_123.png",
-            
-            "LowerLeftGrassWater": "mapTile_136.png",
-            "LowerMiddleGrassWater": "mapTile_137.png",
-            "LowerRightGrassWater": "mapTile_138.png",
             
             "UpperLeftSand": "mapTile_001.png",
             "UpperMiddleSand": "mapTile_002.png",
@@ -54,17 +43,6 @@ class TinyTown extends Phaser.Scene {
             "LowerLeftSand": "mapTile_031.png",
             "LowerMiddleSand": "mapTile_032.png",
             "LowerRightSand": "mapTile_033.png",
-
-            "UpperLeftSandWater": "mapTile_201.png",
-            "UpperMiddleSandWater": "mapTile_202.png",
-            "UpperRightSandWater": "mapTile_203.png",
-            
-            "MiddleLeftSandWater": "mapTile_216.png",
-            "MiddleRightSandWater": "mapTile_218.png",
-            
-            "LowerLeftSandWater": "mapTile_231.png",
-            "LowerMiddleSandWater": "mapTile_232.png",
-            "LowerRightSandWater": "mapTile_233.png"
         };
 
         this.decor = {
@@ -157,14 +135,14 @@ class TinyTown extends Phaser.Scene {
         const isRightSand = rightNeighbor === this.tiles["MiddleMiddleSand"];
 
         // Priority for water transitions if adjacent to both sand and water
-        if (isTopWater && isLeftWater) return this.tiles["UpperLeftGrassWater"];
-        if (isTopWater && isRightWater) return this.tiles["UpperRightGrassWater"];
-        if (isBottomWater && isLeftWater) return this.tiles["LowerLeftGrassWater"];
-        if (isBottomWater && isRightWater) return this.tiles["LowerRightGrassWater"];
-        if (isTopWater) return this.tiles["UpperMiddleGrassWater"];
-        if (isBottomWater) return this.tiles["LowerMiddleGrassWater"];
-        if (isLeftWater) return this.tiles["MiddleLeftGrassWater"];
-        if (isRightWater) return this.tiles["MiddleRightGrassWater"];
+        if (isTopWater && isLeftWater) return this.tiles["UpperLeftGrass"];
+        if (isTopWater && isRightWater) return this.tiles["UpperRightGrass"];
+        if (isBottomWater && isLeftWater) return this.tiles["LowerLeftGrass"];
+        if (isBottomWater && isRightWater) return this.tiles["LowerRightGrass"];
+        if (isTopWater) return this.tiles["UpperMiddleGrass"];
+        if (isBottomWater) return this.tiles["LowerMiddleGrass"];
+        if (isLeftWater) return this.tiles["MiddleLeftGrass"];
+        if (isRightWater) return this.tiles["MiddleRightGrass"];
 
         // Fallback to sand transitions if no water neighbors are present
         if (isTopSand && isLeftSand) return this.tiles["UpperLeftGrass"];
@@ -196,14 +174,14 @@ class TinyTown extends Phaser.Scene {
         const isRightGrass = rightNeighbor === this.tiles["MiddleMiddleGrass"];
 
         // Priority for water transitions if adjacent to both grass and water
-        if (isTopWater && isLeftWater) return this.tiles["UpperLeftSandWater"];
-        if (isTopWater && isRightWater) return this.tiles["UpperRightSandWater"];
-        if (isBottomWater && isLeftWater) return this.tiles["LowerLeftSandWater"];
-        if (isBottomWater && isRightWater) return this.tiles["LowerRightSandWater"];
-        if (isTopWater) return this.tiles["UpperMiddleSandWater"];
-        if (isBottomWater) return this.tiles["LowerMiddleSandWater"];
-        if (isLeftWater) return this.tiles["MiddleLeftSandWater"];
-        if (isRightWater) return this.tiles["MiddleRightSandWater"];
+        if (isTopWater && isLeftWater) return this.tiles["UpperLeftSand"];
+        if (isTopWater && isRightWater) return this.tiles["UpperRightSand"];
+        if (isBottomWater && isLeftWater) return this.tiles["LowerLeftSand"];
+        if (isBottomWater && isRightWater) return this.tiles["LowerRightSand"];
+        if (isTopWater) return this.tiles["UpperMiddleSand"];
+        if (isBottomWater) return this.tiles["LowerMiddleSand"];
+        if (isLeftWater) return this.tiles["MiddleLeftSand"];
+        if (isRightWater) return this.tiles["MiddleRightSand"];
 
         // Fallback to grass transitions if no water neighbors are present
         if (isTopGrass && isLeftGrass) return this.tiles["UpperLeftSand"];
