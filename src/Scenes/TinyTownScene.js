@@ -215,12 +215,17 @@ class TinyTown extends Phaser.Scene {
                 const decorNoiseValue = (noise.perlin2(x * decorFrequency, y * decorFrequency) + 1) / 2;
                 
                 if (tile === this.tiles["MiddleMiddleGrass"]) {
-                    if (decorNoiseValue > 0.8) {
+                    if (decorNoiseValue > 0.485) {
                         this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', this.decor["tree"]);
                     }
                 } else if (tile === this.tiles["MiddleMiddleSand"]) {
-                    if (decorNoiseValue > 0.7) {
+                    if (decorNoiseValue > 0.58) {
                         this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', this.decor["cactus"]);
+                    }
+                }
+                else if (tile === this.tiles["water"]){
+                    if (decorNoiseValue > 0.27) {
+                        this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', this.decor["rock"]);
                     }
                 }
             });
