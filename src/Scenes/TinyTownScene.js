@@ -6,219 +6,164 @@ class TinyTown extends Phaser.Scene {
     }
 
     preload() {
-        // Load the tilesheet and XML
         this.load.setPath("./assets/");
         this.load.atlasXML('tiny_town_tiles', 'mapPack_spritesheet.png', 'mapPack_spritesheet.xml');
     }
 
     create() {
-        // Define map dimensions (in tiles)
-        const height = 15;  // 15 row
-        const width = 20;   // 20 col
+        const height = 15;
+        const width = 20;
+        const tileSize = 64;
 
-        // Define terrain tiles
-        const tiles = {
-            "water": "mapTile_188.png",           
-            "MiddleMiddleGrass": "mapTile_022.png", 
-            "MiddleMiddleSand": "mapTile_017.png"  
+        this.terrainFrequency = 0.04;
+        this.waterFrequency = 0.1;
+
+        this.tiles = {
+            "water": "mapTile_188.png",
+            "MiddleMiddleGrass": "mapTile_022.png",
+            "MiddleMiddleSand": "mapTile_017.png",
+            "UpperLeftGrass": "mapTile_006.png",
+            "UpperMiddleGrass": "mapTile_007.png",
+            "UpperRightGrass": "mapTile_008.png",
+            "MiddleLeftGrass": "mapTile_021.png",
+            "MiddleRightGrass": "mapTile_023.png",
+            "LowerLeftGrass": "mapTile_036.png",
+            "LowerMiddleGrass": "mapTile_037.png",
+            "LowerRightGrass": "mapTile_038.png"
         };
 
-        //Define decor tiles
-        const decor = {
+        this.decor = {
             "cactus": "mapTile_035.png",
             "tree": "mapTile_040.png",
-            "sandRock": "mapTile_049.png",
+            "rock": "mapTile_049.png"
         };
 
-        //Define player sprite
-        const player = {
-            "sprite": "mapTile_136.png"
-        };
-
-        // Initialize Frequencies
-        this.terrainFrequency = 0.06;  // Lower frequency = large regions
-        this.waterFrequency = 0.15;    //  higher frequency = sporadic water placement
-
-        // Generate map
-        this.terrainData = this.generateTerrain(width, height, tiles);
-
-        // Generate decor based on terrain data
-        this.generateDecor(this.terrainData, decor);
-
-        // Add the player sprite (Note: Generic Start Position, Could be anywhere.)
-        this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
-
-        // Get arrow keys
-        this.cursors = this.input.keyboard.createCursorKeys(); 
-
-        // Regenerate the map, decor, and player
-        this.input.keyboard.on('keydown-R', () => {
-            noise.seed(Math.random());  // Generate new seed
-            const newTerrainData = this.generateTerrain(width, height, tiles);  
-            this.generateDecor(newTerrainData, decor); 
-            this.player = this.add.image(200, 200, 'tiny_town_tiles', player.sprite);
-        });
-
-        // Shrinking and Growing Window Keys
-        this.input.keyboard.on('keydown-COMMA', () => {
-            this.adjustFrequency(-0.02, width, height, tiles, decor);
-        });
-
-        this.input.keyboard.on('keydown-PERIOD', () => {
-            this.adjustFrequency(0.02, width, height, tiles, decor);
-        });
-
-        // Display Directions
-        document.getElementById('description').innerHTML = 
-            '<h2>Press &lt; to shrink the sample window</h2>' + 
-            '<h2>Press R to regenerate map</h2>' + 
-            '<h2>Press &gt; to grow the sample window</h2>' +
-            '<h2>Press arrow keys to move</h2>';
-    }
-
-    // Adjust frequency without changing seed
-    adjustFrequency(amount, width, height, tiles, decor) {  
-        this.terrainFrequency += amount;    
-        this.waterFrequency += amount;    
-    
-        this.terrainFrequency = Math.max(0.02, Math.min(0.5, this.terrainFrequency));  
-        this.waterFrequency = Math.max(0.02, Math.min(0.5, this.waterFrequency));  
-    
-        //Regenerate
-        const terrainData = this.generateTerrain(width, height, tiles);
-        this.generateDecor(terrainData, decor);
+        this.generateTerrain(width, height, tileSize);
         this.player = this.add.image(200, 200, 'tiny_town_tiles', 'mapTile_136.png');
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        this.input.keyboard.on('keydown-R', () => {
+            noise.seed(Math.random());
+            this.children.removeAll();
+            this.generateTerrain(width, height, tileSize);
+            this.player = this.add.image(200, 200, 'tiny_town_tiles', 'mapTile_136.png');
+        });
     }
 
-    // Generate from top right to bottom left
-    generateTerrain(width, height, tiles) {
-        const tileSize = 64;
-        const terrainFrequency = this.terrainFrequency;
-        const waterFrequency = this.waterFrequency;
-        let yPosition = 0;
-
-        //Clear previous tiles
+    generateTerrain(width, height, tileSize) {
         this.children.removeAll();
+        this.terrainData = [];  // Store terrain data as a class property
 
-        //Store tile placements/types
-        this.waterTiles = [];  
-        const terrainData = [];
-
-        //Loop through grid
         for (let y = 0; y < height; y++) {
-            let xPosition = 0;
             const row = [];
             for (let x = 0; x < width; x++) {
-               //Use noise to place water/terrain tiles
-                let terrainNoiseValue = (noise.perlin2(x * terrainFrequency, y * terrainFrequency) + 1) / 2;
-                let waterNoiseValue = (noise.perlin2(x * waterFrequency, y * waterFrequency) + 1) / 2;
+                let terrainNoiseValue = (noise.perlin2(x * this.terrainFrequency, y * this.terrainFrequency) + 1) / 2;
+                let waterNoiseValue = (noise.perlin2(x * this.waterFrequency, y * this.waterFrequency) + 1) / 2;
+                
+                let tileKey;
 
-                let tileKey = this.getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles);
-
-                this.add.image(xPosition, yPosition, 'tiny_town_tiles', tileKey);
-
-                row.push({ x: xPosition, y: yPosition, tileKey });
-
-                // Note where water tiles are
-                if (tileKey === tiles["water"]) {
-                    this.waterTiles.push({ x: xPosition, y: yPosition });
+                if (waterNoiseValue < 0.3) {
+                    tileKey = this.tiles["water"];
+                } else if (terrainNoiseValue < 0.5) {
+                    tileKey = this.tiles["MiddleMiddleGrass"];
+                } else {
+                    tileKey = this.tiles["MiddleMiddleSand"];
                 }
 
-                xPosition += tileSize;
+                row.push(tileKey);
+                this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', tileKey);
             }
-            terrainData.push(row);
-            yPosition += tileSize;
+            this.terrainData.push(row);
         }
 
-        return terrainData;
+        this.applyWFCTransitions(width, height, this.terrainData, tileSize);
+        this.generateDecor(this.terrainData, tileSize);
     }
 
-    generateDecor(terrainData, decor) {
-        //Initialize decor frequency 
-        const decorFrequency = 0.1;
-        const cactusThreshold = 0.7;
-        const treeThreshold = 0.7;
-        const rockThreshold = 0.7;
-    
-        //Loop through map grid
-        terrainData.forEach((row) => {
-            row.forEach((cell) => {
+    applyWFCTransitions(width, height, terrainData, tileSize) {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const currentTile = terrainData[y][x];
                 
-                //Use noise to determine decor placement
-                let decorNoiseValue = (noise.perlin2(cell.x * decorFrequency, cell.y * decorFrequency) + 1) / 2;
-    
-                // Place decor based on the tile type
-                if (cell.tileKey === "mapTile_017.png") {  
-                    if (decorNoiseValue > cactusThreshold) {
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["cactus"]);
+                if (currentTile === this.tiles["MiddleMiddleGrass"]) {
+                    const newTile = this.getGrassTransitionTile(x, y, terrainData);
+                    if (newTile) {
+                        terrainData[y][x] = newTile;
+                        this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', newTile);
                     }
-                } else if (cell.tileKey === "mapTile_022.png") {
-                    if (decorNoiseValue > treeThreshold) {
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["tree"]);
+                }
+            }
+        }
+    }
+
+    getGrassTransitionTile(x, y, terrainData) {
+        const topNeighbor = this.safeGetTile(x, y - 1, terrainData);
+        const bottomNeighbor = this.safeGetTile(x, y + 1, terrainData);
+        const leftNeighbor = this.safeGetTile(x - 1, y, terrainData);
+        const rightNeighbor = this.safeGetTile(x + 1, y, terrainData);
+
+        const isTopSand = topNeighbor === this.tiles["MiddleMiddleSand"];
+        const isBottomSand = bottomNeighbor === this.tiles["MiddleMiddleSand"];
+        const isLeftSand = leftNeighbor === this.tiles["MiddleMiddleSand"];
+        const isRightSand = rightNeighbor === this.tiles["MiddleMiddleSand"];
+
+        if (isTopSand && isLeftSand) return this.tiles["UpperLeftGrass"];
+        if (isTopSand && isRightSand) return this.tiles["UpperRightGrass"];
+        if (isBottomSand && isLeftSand) return this.tiles["LowerLeftGrass"];
+        if (isBottomSand && isRightSand) return this.tiles["LowerRightGrass"];
+        if (isTopSand) return this.tiles["UpperMiddleGrass"];
+        if (isBottomSand) return this.tiles["LowerMiddleGrass"];
+        if (isLeftSand) return this.tiles["MiddleLeftGrass"];
+        if (isRightSand) return this.tiles["MiddleRightGrass"];
+
+        return null;
+    }
+
+    safeGetTile(x, y, terrainData) {
+        if (y >= 0 && y < terrainData.length && x >= 0 && x < terrainData[0].length) {
+            return terrainData[y][x];
+        }
+        return null;
+    }
+
+    generateDecor(terrainData, tileSize) {
+        const decorFrequency = 0.1;
+        terrainData.forEach((row, y) => {
+            row.forEach((tile, x) => {
+                const decorNoiseValue = (noise.perlin2(x * decorFrequency, y * decorFrequency) + 1) / 2;
+                
+                if (tile === this.tiles["MiddleMiddleGrass"]) {
+                    if (decorNoiseValue > 0.8) {
+                        this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', this.decor["tree"]);
                     }
-                } else if (cell.tileKey === "mapTile_188.png") {
-                    if (decorNoiseValue > rockThreshold) {
-                        this.add.image(cell.x, cell.y, 'tiny_town_tiles', decor["sandRock"]);
+                } else if (tile === this.tiles["MiddleMiddleSand"]) {
+                    if (decorNoiseValue > 0.7) {
+                        this.add.image(x * tileSize, y * tileSize, 'tiny_town_tiles', this.decor["cactus"]);
                     }
                 }
             });
         });
     }
 
-    // Determine which tile type to place based on noise value
-    getTileFromNoise(terrainNoiseValue, waterNoiseValue, tiles) {
-        if (waterNoiseValue < 0.3) {
-            return tiles["water"];
-        }
-
-        if (terrainNoiseValue < 0.5) {
-            return tiles["MiddleMiddleGrass"];
-        } else {
-            return tiles["MiddleMiddleSand"];
-        }
-    }
-
-    // Check if a tile is water (Snapped??)
-    isWaterTile(x, y) {
-        return this.waterTiles.some(tile => {
-            const snappedX = Math.floor(x / 64) * 64;
-            const snappedY = Math.floor(y / 64) * 64;
-            return tile.x === snappedX && tile.y === snappedY;
-        });
-    }
-
     update() {
-        
-        //Set Player Speed
-        const speed = 5; 
-
-        //Update x,y position
+        const speed = 5;
         if (this.player) {
             let newX = this.player.x;
             let newY = this.player.y;
 
-            //Move player with arrow keys
-            if (this.cursors.left.isDown) {
-                newX -= speed;
-            }
-            if (this.cursors.right.isDown) {
-                newX += speed;
-            }
-            if (this.cursors.up.isDown) {
-                newY -= speed;
-            }
-            if (this.cursors.down.isDown) {
-                newY += speed;
-            }
+            if (this.cursors.left.isDown) newX -= speed;
+            if (this.cursors.right.isDown) newX += speed;
+            if (this.cursors.up.isDown) newY -= speed;
+            if (this.cursors.down.isDown) newY += speed;
 
-            // Prevent movement on water tiles
-            if (!this.isWaterTile(newX, newY)) {
-                this.player.x = newX;
-                this.player.y = newY;
+            const snappedX = Math.floor(newX / 64) * 64;
+            const snappedY = Math.floor(newY / 64) * 64;
+
+            if (this.safeGetTile(snappedX / 64, snappedY / 64, this.terrainData) !== this.tiles["water"]) {
+                this.player.setPosition(newX, newY);
             }
         }
     }
 }
 
-// Export scene
 export default TinyTown;
